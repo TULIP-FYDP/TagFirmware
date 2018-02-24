@@ -6,3 +6,16 @@
 # in the build directory. This behaviour is entirely configurable,
 # please read the ESP-IDF documents if you need to do this.
 #
+CFLAGS += -Wno-format
+
+
+# app depends on compiled gatt db
+main.o: main.h
+
+# rule to compile gatt db
+main.h: $(COMPONENT_PATH)/le_streamer.gatt
+	$(IDF_PATH)/components/btstack/tool/compile_gatt.py $^ $@
+
+# remove compiled gatt db on clean
+COMPONENT_EXTRA_CLEAN = main.h
+
