@@ -27,10 +27,18 @@
 #include <string.h>
 
 #include "btstack.h"
+#include "driver/spi_master.h"
+
 #include "main.h"
 
 #define REPORT_INTERVAL_MS 3000
 #define MAX_NR_CONNECTIONS 1
+
+// TODO: Figure OUT!!!!
+#define SPI_PIN_NUM_MISO 19
+#define SPI_PIN_NUM_MOSI 18
+#define SPI_PIN_NUM_CLK  5
+#define SPI_PIN_NUM_CS   4
 
 static void  packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size);
 static int   att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, uint16_t transaction_mode, uint16_t offset, uint8_t *buffer, uint16_t buffer_size);
@@ -47,6 +55,23 @@ const uint8_t adv_data[] = {
 const uint8_t adv_data_len = sizeof(adv_data);
 
 static btstack_packet_callback_registration_t hci_event_callback_registration;
+
+// SPI Handler Structs
+static spi_device_handle_t spi;
+static spi_bus_config_t buscfg={
+    .miso_io_num=SPI_PIN_NUM_MISO,
+    .mosi_io_num=SPI_PIN_NUM_MOSI,
+    .sclk_io_num=SPI_PIN_NUM_CLK,
+    .quadwp_io_num=-1,
+    .quadhd_io_num=-1
+};
+static spi_device_interface_config_t devcfg={
+    .clock_speed_hz=10*1000*1000,               //Clock out at 10 MHz
+    .mode=0,                                //SPI mode 0
+    .spics_io_num=SPI_PIN_NUM_CS,               //CS pin
+    .queue_size=7,                          //We want to be able to queue 7 transactions at a time
+    .pre_cb=NULL,  //Specify pre-transfer callback to handle D/C line
+};
 
 // support for multiple clients
 typedef struct {
@@ -88,6 +113,12 @@ static void next_connection_index(void){
     }
 }
 
+static void dmw_1000_setup(void) {
+    //Initialize the SPI bus
+    int ret=spi_bus_initialize(HSPI_HOST, &buscfg, 1);
+    assert(ret==ESP_OK);
+}
+
 /* @section Main Application Setup
  *
  * @text Listing MainConfiguration shows main application code.
@@ -98,7 +129,7 @@ static void next_connection_index(void){
 
 /* LISTING_START(MainConfiguration): Init L2CAP, SM, ATT Server, and enable advertisements */
 
-static void tulip_tag_setup(void){
+static void bluetooth_setup(void){
 
     // register for HCI events
     hci_event_callback_registration.callback = &packet_handler;
@@ -153,7 +184,7 @@ static void test_track_sent(le_streamer_connection_t * context, int bytes_sent){
     if (time_passed < REPORT_INTERVAL_MS) return;
     // print speed
     int bytes_per_second = context->test_data_sent * 1000 / time_passed;
-    printf("%c: %u bytes sent-> %u.%03u kB/s\n", context->name, context->test_data_sent, bytes_per_second / 1000, bytes_per_second % 1000);
+    /* printf("%c: %u bytes sent-> %u.%03u kB/s\n", context->name, context->test_data_sent, bytes_per_second / 1000, bytes_per_second % 1000); */
 
     // restart
     context->test_data_start = now;
@@ -205,8 +236,8 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                             context->connection_handle = hci_subevent_le_connection_complete_get_connection_handle(packet);
                             // print connection parameters (without using float operations)
                             conn_interval = hci_subevent_le_connection_complete_get_conn_interval(packet);
-                            printf("%c: Connection Interval: %u.%02u ms\n", context->name, conn_interval * 125 / 100, 25 * (conn_interval & 3));
-                            printf("%c: Connection Latency: %u\n", context->name, hci_subevent_le_connection_complete_get_conn_latency(packet));
+                            /* printf("%c: Connection Interval: %u.%02u ms\n", context->name, conn_interval * 125 / 100, 25 * (conn_interval & 3)); */
+                            /* printf("%c: Connection Latency: %u\n", context->name, hci_subevent_le_connection_complete_get_conn_latency(packet)); */
                             // min con interval 20 ms
                             // gap_request_connection_parameter_update(connection_handle, 0x10, 0x18, 0, 0x0048);
                             // printf("Connected, requesting conn param update for handle 0x%04x\n", connection_handle);
@@ -218,7 +249,7 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                     context = connection_for_conn_handle(att_event_mtu_exchange_complete_get_handle(packet));
                     if (!context) break;
                     context->test_data_len = btstack_min(mtu - 3, sizeof(context->test_data));
-                    printf("%c: ATT MTU = %u => use test data of len %u\n", context->name, mtu, context->test_data_len);
+                    /* printf("%c: ATT MTU = %u => use test data of len %u\n", context->name, mtu, context->test_data_len); */
                     break;
                 case ATT_EVENT_CAN_SEND_NOW:
                     streamer();
@@ -291,7 +322,7 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
     switch(att_handle){
         case ATT_CHARACTERISTIC_0000FF11_0000_1000_8000_00805F9B34FB_01_CLIENT_CONFIGURATION_HANDLE:
             context->le_notification_enabled = little_endian_read_16(buffer, 0) == GATT_CLIENT_CHARACTERISTICS_CONFIGURATION_NOTIFICATION;
-            printf("%c: Notifications enabled %u\n", context->name, context->le_notification_enabled);
+            /* printf("%c: Notifications enabled %u\n", context->name, context->le_notification_enabled); */
             if (context->le_notification_enabled){
                 att_server_request_can_send_now_event(context->connection_handle);
             }
@@ -309,8 +340,11 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
 int btstack_main(void);
 int btstack_main(void)
 {
+    // DWM 1000 initialization
+    dmw_1000_setup();
+
     // btstack initialization
-    tulip_tag_setup();
+    bluetooth_setup();
 
     // turn on BT hardware
 	hci_power_control(HCI_POWER_ON);
