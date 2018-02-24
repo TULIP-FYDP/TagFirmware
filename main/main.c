@@ -5,7 +5,7 @@
 #define __BTSTACK_FILE__ "main.c"
 
 // *****************************************************************************
-/* EXAMPLE_START(le_streamer): LE Streamer - Stream data over GATT.
+/* LE Streamer - Stream data over GATT.
  *
  * @text All newer operating systems provide GATT Client functionality.
  * This example shows how to get a maximal throughput via BLE:
@@ -30,7 +30,7 @@
 #include "main.h"
 
 #define REPORT_INTERVAL_MS 3000
-#define MAX_NR_CONNECTIONS 3
+#define MAX_NR_CONNECTIONS 1
 
 static void  packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size);
 static int   att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, uint16_t transaction_mode, uint16_t offset, uint8_t *buffer, uint16_t buffer_size);
@@ -40,7 +40,7 @@ const uint8_t adv_data[] = {
     // Flags general discoverable, BR/EDR not supported
     0x02, BLUETOOTH_DATA_TYPE_FLAGS, 0x06,
     // Name
-    0x0c, BLUETOOTH_DATA_TYPE_COMPLETE_LOCAL_NAME, 'L', 'E', ' ', 'S', 't', 'r', 'e', 'a', 'm', 'e', 'r',
+    0x0c, BLUETOOTH_DATA_TYPE_COMPLETE_LOCAL_NAME, 'T', 'U', 'L', 'I', 'P', ' ', 'T', 'a', 'g', ' ', ' ',
     // Incomplete List of 16-bit Service Class UUIDs -- FF10 - only valid for testing!
     0x03, BLUETOOTH_DATA_TYPE_INCOMPLETE_LIST_OF_16_BIT_SERVICE_CLASS_UUIDS, 0x10, 0xff,
 };
@@ -98,7 +98,7 @@ static void next_connection_index(void){
 
 /* LISTING_START(MainConfiguration): Init L2CAP, SM, ATT Server, and enable advertisements */
 
-static void le_streamer_setup(void){
+static void tulip_tag_setup(void){
 
     // register for HCI events
     hci_event_callback_registration.callback = &packet_handler;
@@ -309,11 +309,12 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
 int btstack_main(void);
 int btstack_main(void)
 {
-    le_streamer_setup();
+    // btstack initialization
+    tulip_tag_setup();
 
-    // turn on!
+    // turn on BT hardware
 	hci_power_control(HCI_POWER_ON);
 
     return 0;
 }
-/* EXAMPLE_END */
+
