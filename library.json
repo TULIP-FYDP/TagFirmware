@@ -1,0 +1,16 @@
+{
+  "name": "TULIPFirmware",
+  "keywords": "wireless, communication",
+  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TULIP-FYDP/TagFirmware"
+  },
+  "version": "0.6",
+  "exclude": [
+    "adapterBoard",
+    "extras"
+  ],
+  "frameworks": "arduino",
+  "platforms": "*"
+}

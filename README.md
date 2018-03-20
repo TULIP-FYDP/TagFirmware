@@ -1,23 +1,13 @@
-# TULIP FYDP - FIRMWARE
+# About
+Tulip Arduino Bootloader Firmware
 
-## About
-Firmware Repository for TULIP IDE Tag
+# Installation
+* Follow ESP32 arduino setup guide
+* Save repo as .zip file
+* In Arduino IDE: Sketch > Include Library > Add .ZIP Library...
+* Add .zip file
 
-Target: ESP32 platform (bare metal)
-
-## Requirements
-* Python 2.7 w/ pyserial
-* Espressif IDE
-* BTStack Library
-
-## Environment Setup
-
-* TODO
-
-## Build Instructions
-```bash
-make clean # optional
-make
-make flash
-make monitor # optional for serial monitor
-```
+# Firmware
+* Tag/Anchor scripts are in the library example
+  * File > Examples > TULIPFirmware
+  
